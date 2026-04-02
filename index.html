@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Diff Checker & Editor</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="style.css">
+    <!-- JSDiff for diffing arrays -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/7.0.0/diff.min.js"></script>
+</head>
+
+<body>
+    <header class="top-bar">
+        <h1>HTML Diff Checker</h1>
+        <div class="actions">
+            <button id="btn-switch-visual" class="btn secondary">ビジュアル表示へ一括切替</button>
+            <button id="btn-compare" class="btn primary">比較する</button>
+            <button id="btn-copy" class="btn success">最終版HTMLをコピー</button>
+            <button id="btn-clear" class="btn danger">クリア</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Left Column -->
+        <div class="column" id="col-left">
+            <h2>校正前HTML</h2>
+            <div class="tabs">
+                <button class="tab-btn" data-target="preview-left">ビジュアル確認</button>
+                <button class="tab-btn active" data-target="code-left">HTMLコード表示</button>
+            </div>
+            <div class="tab-content">
+                <div id="edit-toolbar-left" class="edit-toolbar hidden">
+                    <span style="font-size: 13px; color: #94a3b8; font-weight: 500;">校正前プレビュー (読取専用)</span>
+                </div>
+                <div id="preview-left" class="preview-area hidden" tabindex="-1"><span
+                        style="color:#9ca3af; font-size:14px;">「HTMLコード表示」タブに切り替えて、<br>校正前のHTMLを貼り付けてください。</span></div>
+                <textarea id="code-left" class="code-input" placeholder="校正前のHTMLを貼り付けてください..."></textarea>
+                <button id="btn-scroll-top-left" class="btn-scroll-top hidden" title="トップへ戻る" aria-label="トップへ戻る">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="column" id="col-right">
+            <h2>校正後HTML <span
+                    style="font-size:12px; font-weight:normal; color:#6b7280; margin-left:8px;">(「ビジュアル確認」で直接編集可能)</span>
+            </h2>
+            <div class="tabs">
+                <button class="tab-btn" data-target="preview-right">ビジュアル確認</button>
+                <button class="tab-btn active" data-target="code-right">HTMLコード表示</button>
+            </div>
+            <div class="tab-content">
+                <div id="edit-toolbar-right" class="edit-toolbar hidden">
+                    <button class="toolbar-btn" data-command="formatBlock" data-value="h2" title="見出し2 (H2)">H2</button>
+                    <button class="toolbar-btn" data-command="formatBlock" data-value="h3" title="見出し3 (H3)">H3</button>
+                    <button class="toolbar-btn" data-command="insertUnorderedList" title="箇条書き (UL)">リスト</button>
+                </div>
+                <div id="preview-right" class="preview-area editable hidden" contenteditable="true" spellcheck="false"
+                    placeholder="ここに直接ペーストするか、テキストを入力できます..."></div>
+                <textarea id="code-right" class="code-input" placeholder="ChatGPT等で校正したHTMLを貼り付けてください..."></textarea>
+                <button id="btn-scroll-top-right" class="btn-scroll-top hidden" title="トップへ戻る" aria-label="トップへ戻る">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom/Side Area: Diff & Warnings -->
+    <div class="info-container" id="info-container">
+        <div class="diff-section hidden" id="diff-section">
+            <h2>差分一覧</h2>
+            <div id="diff-list" class="diff-box"></div>
+        </div>
+        <div class="warning-section">
+            <h2>alt未設定チェック</h2>
+            <ul id="alt-warnings" class="warning-full-list">
+                <li>問題ありません。</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden">最終版HTMLをコピーしました</div>
+
+    <script src="diff.js"></script>
+    <script src="main.js"></script>
+</body>
+
+</html>
