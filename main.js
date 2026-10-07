@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSwitchVisual = document.getElementById('btn-switch-visual');
 
     // Displays
-    const altWarnings = document.getElementById('alt-warnings');
     const diffList = document.getElementById('diff-list');
     const toast = document.getElementById('toast');
 
@@ -75,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 prevEl.innerHTML = codeEl.value; // Render HTML
 
                 if (isRight) {
-                    checkAltAttributes(prevEl);
+                    if (!isUpdatingFromAltList) renderAltList();
                     document.getElementById('edit-toolbar-right').classList.remove('hidden');
                 } else {
                     document.getElementById('edit-toolbar-left').classList.remove('hidden');
@@ -85,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (targetId === 'code-right') {
                     codeRight.value = previewRight.innerHTML;
                     document.getElementById('edit-toolbar-right').classList.add('hidden');
+                    if (!isUpdatingFromAltList) renderAltList();
                 } else if (targetId === 'code-left') {
                     document.getElementById('edit-toolbar-left').classList.add('hidden');
                 }
@@ -100,7 +100,17 @@ document.addEventListener('DOMContentLoaded', () => {
             // But we keep them synced anyway.
         }
         codeRight.value = previewRight.innerHTML;
-        checkAltAttributes(previewRight);
+        if (!isUpdatingFromAltList) renderAltList();
+    });
+
+    let codeRightDebounceTimer;
+    codeRight.addEventListener('input', () => {
+        if (!isUpdatingFromAltList) {
+            clearTimeout(codeRightDebounceTimer);
+            codeRightDebounceTimer = setTimeout(() => {
+                renderAltList();
+            }, 300);
+        }
     });
 
     // Strict structure preserve: Avoid generic wrapper injection if possible
@@ -142,6 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (!previewRight.classList.contains('hidden')) {
             codeRight.value = previewRight.innerHTML;
+            if (!isUpdatingFromAltList) renderAltList();
         }
 
         const leftText = codeLeft.value;
@@ -170,33 +181,174 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Alt Check Logic
-    function checkAltAttributes(container) {
-        const imgs = container.querySelectorAll('img');
-        let warningsHTML = '';
-        let count = 0;
+    let isUpdatingFromAltList = false;
 
-        imgs.forEach(img => {
-            const hasAlt = img.hasAttribute('alt');
-            const altVal = img.getAttribute('alt');
+    function updateAltText(index, newAlt) {
+        isUpdatingFromAltList = true;
+        const isVisualActive = !document.getElementById('preview-right').classList.contains('hidden');
 
-            let issues = [];
-            if (!hasAlt) issues.push('alt属性なし');
-            else if (altVal === "") issues.push('alt=""（値が空）');
-            else if (altVal.trim() === "" && altVal.length > 0) issues.push('alt=" "（空白のみ）');
-
-            if (issues.length > 0) {
-                count++;
-                const src = img.getAttribute('src') || 'No src';
-                warningsHTML += `<li><span class="badge danger">警告</span> ${issues.join(', ')} <br/> <code>&lt;img src="${src}"&gt;</code></li>`;
+        if (isVisualActive) {
+            const img = previewRight.querySelectorAll('img')[index];
+            if (img) {
+                img.setAttribute('alt', newAlt);
+                codeRight.value = previewRight.innerHTML;
             }
+        } else {
+            const code = codeRight.value;
+            let matchCount = 0;
+            const escapedAlt = newAlt.replace(/&/g, '&amp;')
+                                     .replace(/"/g, '&quot;')
+                                     .replace(/</g, '&lt;')
+                                     .replace(/>/g, '&gt;');
+            
+            codeRight.value = code.replace(/<img(?:\s+[^>]*)?>/gi, (match) => {
+                if (matchCount === index) {
+                    matchCount++;
+                    const altRegex = /\balt\s*=\s*(["'])([\s\S]*?)\1/i;
+                    if (altRegex.test(match)) {
+                        return match.replace(altRegex, () => `alt="${escapedAlt}"`);
+                    }
+                    const altUnquotedRegex = /\balt\s*=\s*([^\s>]+)/i;
+                    if (altUnquotedRegex.test(match)) {
+                        return match.replace(altUnquotedRegex, () => `alt="${escapedAlt}"`);
+                    }
+                    if (/^<img>$/i.test(match)) {
+                        return `<img alt="${escapedAlt}">`;
+                    }
+                    return match.replace(/^<img\s+/i, () => `<img alt="${escapedAlt}" `);
+                }
+                matchCount++;
+                return match;
+            });
+        }
+        isUpdatingFromAltList = false;
+    }
+
+    function renderAltList() {
+        const listContainer = document.getElementById('alt-list');
+        const summarySpan = document.getElementById('alt-summary');
+        
+        if (!listContainer || !summarySpan) return;
+        
+        listContainer.innerHTML = ''; 
+
+        let imgs = [];
+        const isVisualActive = !document.getElementById('preview-right').classList.contains('hidden');
+
+        if (isVisualActive) {
+            imgs = Array.from(previewRight.querySelectorAll('img')).map((img, i) => ({
+                src: img.getAttribute('src') || '',
+                alt: img.getAttribute('alt'),
+                hasAlt: img.hasAttribute('alt'),
+                index: i
+            }));
+        } else {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(codeRight.value, 'text/html');
+            imgs = Array.from(doc.querySelectorAll('img')).map((img, i) => ({
+                src: img.getAttribute('src') || '',
+                alt: img.getAttribute('alt'),
+                hasAlt: img.hasAttribute('alt'),
+                index: i
+            }));
+        }
+
+        if (imgs.length === 0) {
+            summarySpan.textContent = '';
+            const emptyMsg = document.createElement('div');
+            emptyMsg.textContent = '画像がありません';
+            emptyMsg.style.padding = '16px';
+            emptyMsg.style.color = '#6b7280';
+            emptyMsg.style.fontSize = '14px';
+            listContainer.appendChild(emptyMsg);
+            return;
+        }
+
+        imgs.forEach((imgData) => {
+            const { src, alt, hasAlt, index } = imgData;
+            const isWarning = !hasAlt || alt === null || alt.trim() === '';
+
+            const item = document.createElement('div');
+            item.className = 'alt-item';
+
+            const numSpan = document.createElement('span');
+            numSpan.className = 'alt-num';
+            numSpan.textContent = index + 1;
+
+            const thumbWrap = document.createElement('div');
+            thumbWrap.className = 'alt-thumb-wrap';
+            
+            const safeSrc = (src.startsWith('http:') || src.startsWith('https:') || src.startsWith('data:image/') || src.startsWith('./') || src.startsWith('/') || src.startsWith('../') || !src.includes(':')) ? src : '';
+            
+            if (safeSrc) {
+                const thumb = document.createElement('img');
+                thumb.className = 'alt-thumb';
+                thumb.src = safeSrc;
+                thumb.alt = 'thumbnail';
+                thumb.onerror = () => {
+                    thumbWrap.innerHTML = '';
+                    const errSpan = document.createElement('span');
+                    errSpan.className = 'alt-thumb-error';
+                    errSpan.appendChild(document.createTextNode('画像を読み込め'));
+                    errSpan.appendChild(document.createElement('br'));
+                    errSpan.appendChild(document.createTextNode('ません'));
+                    thumbWrap.appendChild(errSpan);
+                };
+                thumb.onclick = () => {
+                    window.open(safeSrc, '_blank', 'noopener,noreferrer');
+                };
+                thumbWrap.appendChild(thumb);
+            } else {
+                const errSpan = document.createElement('span');
+                errSpan.className = 'alt-thumb-error';
+                errSpan.appendChild(document.createTextNode('画像を読み込め'));
+                errSpan.appendChild(document.createElement('br'));
+                errSpan.appendChild(document.createTextNode('ません'));
+                thumbWrap.appendChild(errSpan);
+            }
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'alt-input';
+            input.value = hasAlt && alt !== null ? alt : '';
+            input.placeholder = 'altテキストを入力...';
+
+            const badge = document.createElement('span');
+            badge.className = `badge ${isWarning ? 'danger' : 'success'}`;
+            badge.textContent = isWarning ? '未設定' : 'OK';
+
+            input.addEventListener('input', (e) => {
+                const newAlt = e.target.value;
+                const newIsWarning = newAlt.trim() === '';
+                badge.className = `badge ${newIsWarning ? 'danger' : 'success'}`;
+                badge.textContent = newIsWarning ? '未設定' : 'OK';
+
+                updateAltText(index, newAlt);
+                updateSummary();
+            });
+
+            item.appendChild(numSpan);
+            item.appendChild(thumbWrap);
+            item.appendChild(input);
+            item.appendChild(badge);
+
+            listContainer.appendChild(item);
         });
 
-        if (count === 0) {
-            altWarnings.innerHTML = '<li>🎉 alt未設定の画像はありません。</li>';
-        } else {
-            altWarnings.innerHTML = `<li style="background:none; border:none; padding:0 0 8px 0; font-weight:bold; color:var(--danger)">${count}件の警告があります</li>` + warningsHTML;
+        function updateSummary() {
+            const currentWarnings = listContainer.querySelectorAll('.badge.danger').length;
+            if (currentWarnings > 0) {
+                summarySpan.textContent = `(画像${imgs.length}件 / 未設定${currentWarnings}件)`;
+                summarySpan.style.color = 'var(--danger)';
+                summarySpan.style.fontWeight = 'bold';
+            } else {
+                summarySpan.textContent = `(画像${imgs.length}件 / 問題なし)`;
+                summarySpan.style.color = '#16a34a';
+                summarySpan.style.fontWeight = 'normal';
+            }
         }
+        
+        updateSummary();
     }
 
 
@@ -213,7 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
             codeRight.value = '';
             previewLeft.innerHTML = '';
             previewRight.innerHTML = '';
-            altWarnings.innerHTML = '<li>チェック対象がありません。</li>';
+            if (!isUpdatingFromAltList) renderAltList();
             diffList.innerHTML = '「比較する」ボタンを押すとHTMLコード差分が表示されます。';
 
             document.getElementById('diff-section').classList.add('hidden');
@@ -240,7 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Sync to code immediately
             codeRight.value = previewRight.innerHTML;
-            checkAltAttributes(previewRight);
+            if (!isUpdatingFromAltList) renderAltList();
         });
     });
 
@@ -287,4 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Init Editor behavior
     document.execCommand('defaultParagraphSeparator', false, 'p');
+
+    // Initial render
+    if (typeof isUpdatingFromAltList !== 'undefined' && !isUpdatingFromAltList) renderAltList();
 });
