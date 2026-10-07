@@ -243,7 +243,7 @@ del {
 
 .warning-section {
     flex: 1;
-    max-height: 160px;
+    max-height: 250px;
 }
 
 .info-container.diff-active .warning-section {
@@ -271,33 +271,78 @@ del {
     font-weight: 600;
 }
 
-.warning-full-list {
-    list-style: none;
+.alt-list-container {
     padding: 16px;
     margin: 0;
     overflow-y: auto;
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
-.warning-full-list li {
-    margin-bottom: 12px;
-    padding: 10px 12px;
-    background: #fffbeb;
-    border-left: 4px solid #f59e0b;
+.alt-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.alt-num {
     font-size: 14px;
-    border-radius: 0 4px 4px 0;
+    font-weight: 600;
+    color: #6b7280;
+    width: 24px;
+    text-align: right;
+    flex-shrink: 0;
 }
 
-.warning-full-list li code {
-    display: block;
-    background: #fef3c7;
-    padding: 6px 8px;
+.alt-thumb-wrap {
+    width: 120px;
+    height: 80px;
+    flex-shrink: 0;
+    border: 1px solid #e5e7eb;
     border-radius: 4px;
-    color: #b45309;
-    margin-top: 6px;
-    font-family: monospace;
-    font-size: 12px;
-    border: 1px solid #fde68a;
+    background: #f9fafb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.alt-thumb {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.alt-thumb-error {
+    font-size: 11px;
+    color: #9ca3af;
+    text-align: center;
+    line-height: 1.4;
+    padding: 4px;
+}
+
+.alt-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    min-width: 0;
+}
+
+.alt-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 
 .badge.danger {
@@ -309,6 +354,17 @@ del {
     font-weight: bold;
     margin-right: 4px;
 }
+
+.badge.success {
+    background: #16a34a;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-right: 4px;
+}
+
 
 .toast {
     position: fixed;
