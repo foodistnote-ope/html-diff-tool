@@ -15,36 +15,71 @@ document.addEventListener('DOMContentLoaded', () => {
     const diffList = document.getElementById('diff-list');
     const toast = document.getElementById('toast');
 
-    // Sync Scroll feature
+    // スクロール連動の切り替えチェックボックス
+    const syncScrollToggle = document.getElementById('sync-scroll-toggle');
+
+    // タブ切り替え時などにスクロール基準位置を更新するための関数リスト
+    const syncResetCallbacks = [];
+
+    // 左右のスクロール連動機能
+    // ※チェックがOFFのときは個別スクロール、ONのときは手動調整した高さを保ったまま一緒に動くように実装
     function setupSyncScroll(el1, el2) {
         let isSyncing1 = false;
         let isSyncing2 = false;
+        let lastScrollTop1 = el1.scrollTop;
+        let lastScrollTop2 = el2.scrollTop;
+
+        // 基準となるスクロール位置を最新化する関数
+        const updateBasePositions = () => {
+            lastScrollTop1 = el1.scrollTop;
+            lastScrollTop2 = el2.scrollTop;
+        };
+        syncResetCallbacks.push(updateBasePositions);
 
         el1.addEventListener('scroll', () => {
+            const currentTop1 = el1.scrollTop;
+            const delta = currentTop1 - lastScrollTop1;
+            lastScrollTop1 = currentTop1;
+
+            // 連動チェックがOFFの場合は、もう片方を動かさず終了
+            if (!syncScrollToggle || !syncScrollToggle.checked) {
+                lastScrollTop2 = el2.scrollTop;
+                return;
+            }
+
             if (!isSyncing1) {
                 isSyncing2 = true;
-                const scrollRange1 = el1.scrollHeight - el1.clientHeight;
-                const scrollRange2 = el2.scrollHeight - el2.clientHeight;
-                if (scrollRange1 > 0 && scrollRange2 > 0) {
-                    const percent = el1.scrollTop / scrollRange1;
-                    el2.scrollTop = percent * scrollRange2;
-                }
+                // 同じ移動量（ピクセル数）だけ動かすことで、左右の高さ差があっても位置ズレを防ぐ
+                el2.scrollTop += delta;
+                lastScrollTop2 = el2.scrollTop;
             }
             isSyncing1 = false;
         });
 
         el2.addEventListener('scroll', () => {
+            const currentTop2 = el2.scrollTop;
+            const delta = currentTop2 - lastScrollTop2;
+            lastScrollTop2 = currentTop2;
+
+            // 連動チェックがOFFの場合は、もう片方を動かさず終了
+            if (!syncScrollToggle || !syncScrollToggle.checked) {
+                lastScrollTop1 = el1.scrollTop;
+                return;
+            }
+
             if (!isSyncing2) {
                 isSyncing1 = true;
-                const scrollRange1 = el1.scrollHeight - el1.clientHeight;
-                const scrollRange2 = el2.scrollHeight - el2.clientHeight;
-                if (scrollRange1 > 0 && scrollRange2 > 0) {
-                    const percent = el2.scrollTop / scrollRange2;
-                    el1.scrollTop = percent * scrollRange1;
-                }
+                // 同じ移動量（ピクセル数）だけ動かすことで、左右の高さ差があっても位置ズレを防ぐ
+                el1.scrollTop += delta;
+                lastScrollTop1 = el1.scrollTop;
             }
             isSyncing2 = false;
         });
+
+        // チェックボックスの状態が切り替わったときに最新の位置を記録しておく
+        if (syncScrollToggle) {
+            syncScrollToggle.addEventListener('change', updateBasePositions);
+        }
     }
 
     setupSyncScroll(codeLeft, codeRight);
@@ -64,6 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetId = btn.dataset.target;
             const targetEl = document.getElementById(targetId);
             targetEl.classList.remove('hidden');
+
+            // タブ切り替え時にスクロール位置の基準を更新
+            syncResetCallbacks.forEach(cb => cb());
 
             // Synchronization when changing tabs
             if (targetId.startsWith('preview')) {
