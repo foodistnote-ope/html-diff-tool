@@ -15,8 +15,12 @@
     <header class="top-bar">
         <h1>HTML Diff Checker</h1>
         <div class="actions">
-            <button id="btn-switch-visual" class="btn secondary">ビジュアル表示へ一括切替</button>
-            <button id="btn-compare" class="btn primary">比較する</button>
+            <label class="sync-scroll-control" title="チェックを外すと左右を個別にスクロールできます">
+                <input type="checkbox" id="sync-scroll-toggle" checked>
+                <span>スクロール連動</span>
+            </label>
+            <button id="btn-switch-visual" class="btn primary">ビジュアル表示へ一括切替</button>
+            <button id="btn-compare" class="btn secondary">比較する</button>
             <button id="btn-copy" class="btn success">最終版HTMLをコピー</button>
             <button id="btn-clear" class="btn danger">クリア</button>
         </div>

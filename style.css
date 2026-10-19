@@ -47,7 +47,38 @@ header h1 {
 
 .actions {
     display: flex;
+    align-items: center;
     gap: 8px;
+}
+
+/* スクロール連動の切り替えチェックボックス */
+.sync-scroll-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #f9fafb;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-main);
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.sync-scroll-control:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.sync-scroll-control input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+    margin: 0;
 }
 
 .btn {
